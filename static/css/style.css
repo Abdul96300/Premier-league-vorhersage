@@ -1,0 +1,134 @@
+/* style.css - handgeschriebenes Design.
+   Stil: nuechtern, sportlich-redaktionell. Kein Framework.
+   Farben bewusst sparsam: Anthrazit (Text), Off-White (Hintergrund),
+   ein gedaempftes Gruen als einzige Akzentfarbe. */
+
+/* --- Farben zentral als Variablen definieren ---
+   So steht jede Farbe nur EINMAL hier oben. Will man spaeter das Gruen
+   aendern, aendert man nur diese eine Zeile. var(--name) ruft sie ab. */
+:root {
+    --anthrazit: #1f2328;     /* dunkles Grau, fast schwarz - der Haupttext */
+    --offwhite: #f7f6f3;      /* warmes Weiss - der Seitenhintergrund */
+    --weiss: #ffffff;         /* reines Weiss - fuer Karten/Tabellen */
+    --gruen: #2f7d4f;         /* gedaempftes Gruen - die Akzentfarbe */
+    --linie: #dcdcd6;         /* dezente Linienfarbe fuer Raender */
+    --grau-text: #6b7177;     /* abgeschwaechtes Grau fuer Nebentexte */
+}
+
+/* --- Grundlayout --- */
+body {
+    /* Serifenlose Systemschrift - klar und ohne Extra-Download. */
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--anthrazit);
+    background-color: var(--offwhite);
+    line-height: 1.5;
+    margin: 0;
+    padding: 40px 20px;       /* viel Weissraum oben/unten */
+}
+
+/* Inhalt mittig und in angenehmer Lesebreite halten.
+   Wir haengen diese Klasse gleich an ein <div> in den Templates. */
+.inhalt {
+    max-width: 640px;
+    margin: 0 auto;           /* zentriert den Block horizontal */
+}
+
+/* --- Ueberschriften --- */
+h1 {
+    font-size: 26px;
+    font-weight: 600;
+    margin-bottom: 24px;
+}
+
+h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 32px;
+    margin-bottom: 12px;
+    /* Duenne Linie unter Zwischenueberschriften - redaktioneller Look. */
+    border-bottom: 1px solid var(--linie);
+    padding-bottom: 6px;
+}
+
+/* --- Formular --- */
+label {
+    display: block;           /* jedes Label in eigene Zeile */
+    margin-top: 16px;
+    margin-bottom: 4px;
+    font-size: 14px;
+    color: var(--grau-text);
+}
+
+select {
+    width: 100%;
+    padding: 8px;
+    font-size: 15px;
+    border: 1px solid var(--linie);
+    border-radius: 4px;       /* nur leicht abgerundet, nicht uebertrieben */
+    background-color: var(--weiss);
+}
+
+button {
+    margin-top: 24px;
+    padding: 10px 18px;
+    font-size: 15px;
+    color: var(--weiss);
+    background-color: var(--gruen);   /* einfarbig, KEIN Verlauf */
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    /* Beim Drueberfahren minimal dunkler - dezentes Feedback. */
+    background-color: #276843;
+}
+
+/* --- Fehlermeldung --- */
+.fehler {
+    color: #a4262c;           /* gedaempftes Rot */
+    background-color: #fdecec;
+    border: 1px solid #f3c9c9;
+    padding: 10px 12px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+/* --- Tabellen --- */
+table {
+    width: 100%;
+    border-collapse: collapse;   /* keine doppelten Zellraender */
+    background-color: var(--weiss);
+    margin-bottom: 8px;
+}
+
+th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--linie);   /* nur waagerechte Trennlinien */
+}
+
+th {
+    font-size: 13px;
+    color: var(--grau-text);
+    font-weight: 600;
+}
+
+/* Zahlenspalten rechtsbuendig und in Monospace - sauber untereinander. */
+.zahl {
+    text-align: right;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* --- Zeile mit den erwarteten Toren --- */
+.erwartete-tore {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+/* --- Zurueck-Link --- */
+a {
+    color: var(--gruen);
+}

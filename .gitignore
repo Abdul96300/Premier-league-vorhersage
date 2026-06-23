@@ -1,0 +1,12 @@
+# Virtuelle Umgebung (maschinenspezifisch, gehoert nie ins Repo)
+venv/
+
+# Python-Cache
+__pycache__/
+*.pyc
+
+# macOS-Systemdatei
+.DS_Store
+
+# Editor-Ordner (falls VS Code o.ae.)
+.vscode/

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!-- index.html = die Startseite mit dem Eingabe-Formular. -->
+<!-- Die doppelten geschweiften Klammern weiter unten sind KEIN HTML, -->
+<!-- sondern Jinja: damit setzt Flask hier Python-Werte ein. -->
+<!-- Achtung: Jinja durchsucht die GANZE Datei nach seinen Klammern, -->
+<!-- auch in HTML-Kommentaren - darum hier keine echten Klammern als Beispiel. -->
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <title>Premier-League-Vorhersage</title>
+    <!-- url_for('static', ...) baut den korrekten Pfad zum static-Ordner. -->
+    <!-- Besser als ein fester Pfad "/static/...", weil Flask das selbst loest. -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="inhalt">
+        <h1>Premier-League-Spielvorhersage</h1>
+
+        <!-- Fehlermeldung nur anzeigen, wenn die Route eine uebergeben hat. -->
+        <!-- Wird "fehler" gar nicht uebergeben, ist es leer und der Block faellt weg. -->
+        {% if fehler %}
+            <p class="fehler">{{ fehler }}</p>
+        {% endif %}
+
+        <!-- Das Formular schickt seine Daten per POST an die Adresse /vorhersage. -->
+        <!-- "action" = wohin geschickt wird, "method" = wie (POST = Daten senden). -->
+        <form action="/vorhersage" method="post">
+
+            <!-- Erstes Dropdown: das Heimteam. -->
+            <!-- name="heim" ist der Schluessel, unter dem der Server den Wert spaeter liest. -->
+            <label for="heim">Heimteam</label>
+            <select name="heim" id="heim">
+                <!-- Die Schleife laeuft ueber alle Teamnamen, die die Route uebergibt, -->
+                <!-- und erzeugt fuer jedes Team eine Auswahl-Zeile (option). -->
+                {% for team in teams %}
+                    <option value="{{ team }}">{{ team }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- Zweites Dropdown: das Auswaertsteam. Gleiche Liste. -->
+            <label for="auswaerts">Auswaertsteam</label>
+            <select name="auswaerts" id="auswaerts">
+                {% for team in teams %}
+                    <option value="{{ team }}">{{ team }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- Der Knopf, der das Formular absendet. -->
+            <button type="submit">Vorhersage berechnen</button>
+        </form>
+    </div>
+</body>
+</html>

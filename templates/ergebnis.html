@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!-- ergebnis.html = zeigt das Resultat einer Vorhersage an. -->
+<!-- Die Werte (heim, auswaerts, ergebnis) kommen aus der Route /vorhersage. -->
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <title>Vorhersage: {{ heim }} - {{ auswaerts }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="inhalt">
+        <h1>{{ heim }} <span style="color:#6b7177;">gegen</span> {{ auswaerts }}</h1>
+
+        <!-- Erwartete Tore. Das Filter |round(2) rundet auf 2 Nachkommastellen. -->
+        <p class="erwartete-tore">
+            Erwartete Tore:
+            {{ ergebnis.erwartete_heimtore | round(2) }}
+            :
+            {{ ergebnis.erwartete_auswaertstore | round(2) }}
+        </p>
+
+        <!-- Die drei Wahrscheinlichkeiten. Im Modell sind sie 0..1, -->
+        <!-- darum * 100 fuer Prozent und auf 1 Nachkommastelle gerundet. -->
+        <h2>Wahrscheinlichkeiten</h2>
+        <table>
+            <tr>
+                <td>Heimsieg ({{ heim }})</td>
+                <td class="zahl">{{ (ergebnis.p_heimsieg * 100) | round(1) }} %</td>
+            </tr>
+            <tr>
+                <td>Unentschieden</td>
+                <td class="zahl">{{ (ergebnis.p_remis * 100) | round(1) }} %</td>
+            </tr>
+            <tr>
+                <td>Auswaertssieg ({{ auswaerts }})</td>
+                <td class="zahl">{{ (ergebnis.p_auswaertssieg * 100) | round(1) }} %</td>
+            </tr>
+        </table>
+
+        <!-- Die wahrscheinlichsten Ergebnisse (Top 4). -->
+        <!-- top_ergebnisse ist eine Liste von (heimtore, auswaertstore, p). -->
+        <!-- In der Schleife greifen wir mit eintrag[0]/[1]/[2] auf die drei Werte zu. -->
+        <h2>Wahrscheinlichste Ergebnisse</h2>
+        <table>
+            <tr>
+                <th>Ergebnis</th>
+                <th class="zahl">Wahrscheinlichkeit</th>
+            </tr>
+            {% for eintrag in ergebnis.top_ergebnisse %}
+                <tr>
+                    <td class="zahl">{{ eintrag[0] }} : {{ eintrag[1] }}</td>
+                    <td class="zahl">{{ (eintrag[2] * 100) | round(1) }} %</td>
+                </tr>
+            {% endfor %}
+        </table>
+
+        <!-- Link zurueck zur Startseite, um ein neues Spiel zu waehlen. -->
+        <p><a href="/">&larr; Neue Vorhersage</a></p>
+    </div>
+</body>
+</html>
