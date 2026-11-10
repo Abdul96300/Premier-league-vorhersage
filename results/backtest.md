@@ -8,7 +8,10 @@ Echte Ausgaenge im Test: Heimsieg 88, Remis 46, Auswaertssieg 58
 |---|---:|---:|---:|
 | Basislinie (Haeufigkeiten Hinrunde) | 45.8 % | 1.070 | 0.646 |
 | Poisson-Modell (model.py) | 56.2 % | 0.917 | 0.540 |
+| Poisson-Modell (Walk-Forward) | 56.8 % | 0.914 | 0.537 |
 | Buchmacher (Pinnacle) | 61.5 % | 0.879 | 0.512 |
+
+Die beiden Poisson-Zeilen unterscheiden sich nur darin, woraus die Staerken berechnet werden: einmal aus der Hinrunde (model.py) oder vor jedem Spieltag neu aus allen bis dahin gespielten Spielen (Walk-Forward).
 
 - **Accuracy:** Anteil der Spiele, bei denen der wahrscheinlichste Ausgang eingetreten ist. Hoeher ist besser.
 - **Log-Loss:** Durchschnitt von -ln(Wahrscheinlichkeit des echten Ausgangs). Bestraft sichere Fehlprognosen stark. Niedriger ist besser.

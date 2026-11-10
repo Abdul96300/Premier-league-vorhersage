@@ -11,11 +11,13 @@
 #   1. Saison nach Datum sortieren und in der Mitte teilen.
 #        Hinrunde   = Training (nur daraus werden die Staerken berechnet)
 #        Rueckrunde = Test     (diese Spiele werden vorhergesagt)
-#   2. Fuer jedes Testspiel drei Vorhersagen (Heimsieg / Remis / Auswaertssieg):
-#        a) Basislinie: die Ergebnis-Haeufigkeiten der Hinrunde
-#        b) das Poisson-Modell aus model.py, nur auf der Hinrunde berechnet
-#        c) der Buchmacher Pinnacle als Vergleichsmassstab
-#   3. Alle drei mit denselben drei Kennzahlen bewerten.
+#   2. Fuer jedes Testspiel vier Vorhersagen (Heimsieg / Remis / Auswaertssieg):
+#        a)  Basislinie: die Ergebnis-Haeufigkeiten der Hinrunde
+#        b)  das Poisson-Modell aus model.py, nur auf der Hinrunde berechnet
+#        b2) dasselbe Poisson-Modell, aber vor jedem Spieltag mit allen bis
+#            dahin gespielten Spielen neu berechnet (Walk-Forward)
+#        c)  der Buchmacher Pinnacle als Vergleichsmassstab
+#   3. Alle mit denselben drei Kennzahlen bewerten.
 #
 # Diese Datei aendert nichts an model.py oder app.py, sie benutzt model.py nur.
 # Start im Projektordner:  python3 evaluate.py
@@ -128,7 +130,7 @@ def tatsaechliche_ausgaenge(rueckrunde):
 
 
 # ---------------------------------------------------------------------------
-# 2. Die drei Vorhersage-Varianten
+# 2. Die vier Vorhersage-Varianten
 #    Jede gibt ein Array zurueck: eine Zeile pro Testspiel, drei Spalten
 #    (P(Heimsieg), P(Remis), P(Auswaertssieg)), jede Zeile summiert sich zu 1.
 # ---------------------------------------------------------------------------
@@ -153,6 +155,32 @@ def basislinie_vorhersagen(hinrunde, anzahl_testspiele):
     return np.array([anteile] * anzahl_testspiele)
 
 
+def poisson_fuer_spiele(staerken_modell, spiele):
+    """
+    Sagt fuer die uebergebenen Spiele mit einem fertig berechneten Modell
+    Heimsieg / Remis / Auswaertssieg vorher. Gibt eine Liste von Zeilen
+    zurueck, eine Zeile [p_H, p_D, p_A] pro Spiel.
+
+    Warum eine eigene Funktion? Beide Poisson-Varianten (b und b2) benutzen
+    genau diesen Code. Sie unterscheiden sich NUR darin, aus welchen Spielen
+    das Modell berechnet wird. So ist sichergestellt, dass ein Unterschied in
+    der Tabelle wirklich vom Neuberechnen kommt und nicht von abweichendem Code.
+    """
+    zeilen = []
+    for heim, auswaerts in zip(spiele["HomeTeam"], spiele["AwayTeam"]):
+        ergebnis = model.vorhersage(staerken_modell, heim, auswaerts)
+        p = [ergebnis["p_heimsieg"], ergebnis["p_remis"], ergebnis["p_auswaertssieg"]]
+
+        # Normalisieren: model.vorhersage() rechnet nur bis max_tore=10 Tore pro
+        # Team, deshalb ist die Summe minimal kleiner als 1 (siehe README).
+        # Damit alle Varianten fair verglichen werden, teilen wir durch
+        # die Summe. An den Verhaeltnissen aendert das praktisch nichts.
+        summe = sum(p)
+        zeilen.append([wert / summe for wert in p])
+
+    return zeilen
+
+
 def poisson_vorhersagen(hinrunde, rueckrunde):
     """
     b) Das eigene Poisson-Modell. Die Staerken werden NUR aus der Hinrunde
@@ -161,18 +189,53 @@ def poisson_vorhersagen(hinrunde, rueckrunde):
        also exakt dieselbe Funktion, die auch die App benutzt.
     """
     modell_hinrunde = model.berechne_staerken(ins_modellformat(hinrunde))
+    return np.array(poisson_fuer_spiele(modell_hinrunde, rueckrunde))
 
+
+def poisson_walk_forward_vorhersagen(saison, rueckrunde):
+    """
+    b2) Poisson-Modell mit Walk-Forward.
+
+    Das Problem von b): Die Staerken sind ab dem Stichtag eingefroren. Ein
+    Spiel im Mai wird nur mit Wissen aus der Hinrunde vorhergesagt, obwohl bis
+    dahin schon viele weitere Spiele gespielt wurden.
+
+    Walk-Forward macht es so, wie man es in der Realitaet tun wuerde: Vor
+    jedem Datum werden die Staerken aus ALLEN Spielen neu berechnet, die bis
+    dahin stattgefunden haben - und nur aus diesen. Damit werden die Spiele
+    dieses Datums vorhergesagt. Dann "geht man einen Schritt weiter" zum
+    naechsten Datum, und die gerade vorhergesagten Spiele wandern ins Training.
+
+    Getestet werden dieselben Spiele wie bei b) (gleicher Stichtag), damit
+    die Zeilen der Tabelle direkt vergleichbar sind.
+    """
     zeilen = []
-    for heim, auswaerts in zip(rueckrunde["HomeTeam"], rueckrunde["AwayTeam"]):
-        ergebnis = model.vorhersage(modell_hinrunde, heim, auswaerts)
-        p = [ergebnis["p_heimsieg"], ergebnis["p_remis"], ergebnis["p_auswaertssieg"]]
+    # Merkt sich die Zeilennummern der Spiele in der Reihenfolge, in der sie
+    # vorhergesagt wurden - fuer den Reihenfolge-Check am Ende.
+    vorhergesagte_spiele = []
 
-        # Normalisieren: model.vorhersage() rechnet nur bis max_tore=10 Tore pro
-        # Team, deshalb ist die Summe minimal kleiner als 1 (siehe README).
-        # Damit alle drei Varianten fair verglichen werden, teilen wir durch
-        # die Summe. An den Verhaeltnissen aendert das praktisch nichts.
-        summe = sum(p)
-        zeilen.append([wert / summe for wert in p])
+    # groupby("datum") fasst die Testspiele nach Datum zusammen: Pro Durchlauf
+    # bekommen wir EIN Datum und alle Spiele, die an diesem Tag stattfanden.
+    # So wird pro Datum nur einmal neu berechnet, nicht fuer jedes Spiel.
+    # Die Daten kommen dabei aufsteigend sortiert, also in zeitlicher Folge.
+    for datum, spiele_an_diesem_tag in rueckrunde.groupby("datum"):
+        # Training = alle Spiele STRIKT vor diesem Datum. Auch Spiele vom
+        # selben Tag gehoeren nicht dazu: Deren Ergebnis kennt man vor dem
+        # Anpfiff noch nicht (oder nur teilweise, je nach Anstosszeit).
+        bisher_gespielt = saison[saison["datum"] < datum]
+
+        # Sicherheitscheck gegen ein Datenleck, fuer jedes Datum einzeln.
+        assert bisher_gespielt["datum"].max() < datum, f"Datenleck am {datum:%d.%m.%Y}!"
+
+        modell_bis_heute = model.berechne_staerken(ins_modellformat(bisher_gespielt))
+        zeilen.extend(poisson_fuer_spiele(modell_bis_heute, spiele_an_diesem_tag))
+        vorhergesagte_spiele.extend(spiele_an_diesem_tag.index)
+
+    # Die Kennzahlen vergleichen Zeile fuer Zeile mit den echten Ergebnissen
+    # aus tatsaechliche_ausgaenge(). Deshalb muss die Reihenfolge exakt der von
+    # rueckrunde entsprechen - sonst wuerde Spiel A mit dem Ergebnis von
+    # Spiel B verglichen, und die Zahlen waeren unbemerkt falsch.
+    assert vorhergesagte_spiele == list(rueckrunde.index), "Reihenfolge der Spiele stimmt nicht!"
 
     return np.array(zeilen)
 
@@ -273,6 +336,21 @@ def brier_score(p, wahr):
     return np.mean(np.sum((p - wahr) ** 2, axis=1))
 
 
+def anzahl_unterschiedlicher_tipps(p_a, p_b):
+    """
+    Zaehlt, bei wie vielen Spielen zwei Modelle einen ANDEREN Ausgang als
+    wahrscheinlichsten nennen.
+
+    Warum interessant? Die Accuracy zweier Modelle kann sich nur bei genau
+    diesen Spielen unterscheiden - bei allen anderen tippen beide gleich und
+    liegen gemeinsam richtig oder gemeinsam falsch. Ist die Zahl klein,
+    aendert Walk-Forward vor allem die Prozentzahlen, kaum aber die Tipps.
+    """
+    tipp_a = np.argmax(p_a, axis=1)
+    tipp_b = np.argmax(p_b, axis=1)
+    return int(np.sum(tipp_a != tipp_b))
+
+
 # ---------------------------------------------------------------------------
 # 4. Ausgabe
 # ---------------------------------------------------------------------------
@@ -325,6 +403,10 @@ def schreibe_markdown(pfad, split_zeilen, ergebnisse):
     for name, acc, ll, bs in ergebnisse:
         zeilen.append(f"| {name} | {acc * 100:.1f} % | {ll:.3f} | {bs:.3f} |")
     zeilen.append("")
+    zeilen.append("Die beiden Poisson-Zeilen unterscheiden sich nur darin, woraus die "
+                  "Staerken berechnet werden: einmal aus der Hinrunde (model.py) oder vor "
+                  "jedem Spieltag neu aus allen bis dahin gespielten Spielen (Walk-Forward).")
+    zeilen.append("")
     zeilen.append("- **Accuracy:** Anteil der Spiele, bei denen der wahrscheinlichste "
                   "Ausgang eingetreten ist. Hoeher ist besser.")
     zeilen.append("- **Log-Loss:** Durchschnitt von -ln(Wahrscheinlichkeit des echten "
@@ -353,9 +435,15 @@ if __name__ == "__main__":
 
     wahr = tatsaechliche_ausgaenge(rueckrunde)
 
+    # Die beiden Poisson-Varianten bekommen eigene Variablen, weil wir sie
+    # unten in der Zusatzauswertung noch einmal direkt vergleichen.
+    p_statisch = poisson_vorhersagen(hinrunde, rueckrunde)
+    p_walk_forward = poisson_walk_forward_vorhersagen(saison, rueckrunde)
+
     vorhersagen = {
         "Basislinie (Haeufigkeiten Hinrunde)": basislinie_vorhersagen(hinrunde, len(rueckrunde)),
-        "Poisson-Modell (model.py)": poisson_vorhersagen(hinrunde, rueckrunde),
+        "Poisson-Modell (model.py)": p_statisch,
+        "Poisson-Modell (Walk-Forward)": p_walk_forward,
         "Buchmacher (Pinnacle)": buchmacher_vorhersagen(rueckrunde),
     }
 
@@ -370,6 +458,18 @@ if __name__ == "__main__":
 
     split_zeilen = beschreibe_split(hinrunde, rueckrunde)
     drucke_tabelle(split_zeilen, ergebnisse)
+
+    # Zusatzauswertung nur fuer die Konsole: Wie stark aendert Walk-Forward
+    # die Tipps gegenueber dem statischen Modell?
+    # Neuberechnungen = Anzahl verschiedener Daten in der Rueckrunde, weil
+    # poisson_walk_forward_vorhersagen() pro Datum genau einmal rechnet.
+    unterschiede = anzahl_unterschiedlicher_tipps(p_statisch, p_walk_forward)
+    print()
+    print("Zusatzauswertung Walk-Forward:")
+    print(f"  Staerken neu berechnet an {rueckrunde['datum'].nunique()} verschiedenen Tagen")
+    print(f"  Tipp (wahrscheinlichster Ausgang) anders als beim statischen Modell: "
+          f"{unterschiede} von {len(rueckrunde)} Testspielen")
+
     schreibe_markdown(ERGEBNIS_PFAD, split_zeilen, ergebnisse)
     print()
     print(f"Gespeichert in {ERGEBNIS_PFAD}")
