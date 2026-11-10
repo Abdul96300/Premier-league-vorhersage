@@ -66,7 +66,15 @@ Buchmachers Pinnacle (ohne Marge).
 |---|---:|---:|---:|
 | Basislinie | 45,8 % | 1,070 | 0,646 |
 | Poisson-Modell | 56,2 % | 0,917 | 0,540 |
-| Buchmacher (Pinnacle) | 61,5 % | 0,879 | 0,512 |
+| Buchmacher (Pinnacle) | 61,5 % | 0,879 | 0,512 | 
+| Poisson-Modell (Walk-Forward) | 56,8 % | 0,914 | 0,537 |
+
+Zusätzlich gibt es eine Walk-Forward-Variante: Vor jedem Spieltag werden die
+Stärken aus allen bis dahin gespielten Spielen neu berechnet, so wie man es in
+der Praxis tun würde. Das verbessert alle drei Kennzahlen nur minimal, der
+wahrscheinlichste Ausgang ändert sich bei 11 von 192 Spielen. Der Abstand zum
+Buchmacher liegt also kaum an veralteten Stärken, sondern eher daran, dass das
+Modell nur Tore kennt und alle Spiele gleich stark gewichtet.
 
 Das Poisson-Modell schlägt die Basislinie deutlich, liegt aber messbar hinter
 dem Buchmacher. Das ist erwartbar: Pinnacle berücksichtigt Verletzungen,
