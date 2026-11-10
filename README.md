@@ -52,3 +52,28 @@ Dann im Browser öffnen: http://localhost:5000
 Die Wahrscheinlichkeiten summieren sich auf etwa 99 bis 100 Prozent, nicht
 auf exakt 100. Sehr hohe Ergebnisse mit mehr als 10 Toren pro Team werden
 abgeschnitten. Bei `max_tore=10` ist die Abweichung vernachlässigbar.
+
+
+## Wie gut ist das Modell? (Backtest)
+
+Um das Modell ehrlich zu prüfen, berechne ich die Teamstärken nur aus der
+Hinrunde 2023/24 (188 Spiele bis 28.12.2023) und sage damit die 192 Spiele
+der Rückrunde vorher. Zum Vergleich dienen eine Basislinie, die für jedes
+Spiel nur die Ergebnis-Häufigkeiten der Hinrunde ansetzt, und die Quoten des
+Buchmachers Pinnacle (ohne Marge).
+
+| Modell | Accuracy | Log-Loss | Brier-Score |
+|---|---:|---:|---:|
+| Basislinie | 45,8 % | 1,070 | 0,646 |
+| Poisson-Modell | 56,2 % | 0,917 | 0,540 |
+| Buchmacher (Pinnacle) | 61,5 % | 0,879 | 0,512 |
+
+Das Poisson-Modell schlägt die Basislinie deutlich, liegt aber messbar hinter
+dem Buchmacher. Das ist erwartbar: Pinnacle berücksichtigt Verletzungen,
+Aufstellungen und aktuelle Form, mein Modell nur die Tore der Hinrunde.
+
+Einschränkungen: nur eine Saison und 192 Testspiele, die Stärken werden
+während der Rückrunde nicht aktualisiert, und keins der Modelle sagt je ein
+Unentschieden als wahrscheinlichsten Ausgang voraus.
+
+Reproduzieren: `python3 evaluate.py` (Ergebnis in `results/backtest.md`).
